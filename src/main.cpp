@@ -2,21 +2,40 @@
 #include "ray.h"
 #include "vec3.h"
 
+#include <cmath>
 #include <iostream>
 
-bool hit_sphere(const point3 &center, double radius, const ray &r) {
-  vec3 oc = center - r.origin();
-  double a = dot(r.direction(), r.direction());
-  double b = -2.0 * dot(r.direction(), oc);
-  double c = dot(oc, oc) - radius * radius;
-  double discriminant = b * b - 4 * a * c;
-  return (discriminant >= 0);
+double hit_sphere(const point3 &center, double radius, const ray &r) {
+  // (C - P)(C - P) = r ^ 2
+
+  // P(t) = Q + td
+  vec3 oc = center - r.origin(); // oc -> Q
+
+  // a = d ^ 2 where d is the ray vector.
+  // essentialy the square of the direction were moving
+  // from oc
+  double a = r.direction().length_squared();
+  double h = dot(r.direction(), oc);
+  double c = oc.length_squared() - radius * radius;
+  double discriminant = h * h - a * c;
+
+  if (discriminant < 0) {
+    // Ray missed the sphere
+    return -1.0;
+  } else {
+    // 2nd order polynomial solution - simplified with b = -2h
+    // t = [h + sqrt ( h ^ 2 - ac)] / a
+    return (h - std::sqrt(discriminant) / a);
+  }
 }
 
 color ray_color(const ray &r) {
-  if (hit_sphere(point3(0, 0, -1), 0.5, r)) {
-    return color(0, 255, 0);
+  double t = hit_sphere(point3(0, 0, -1), 0.5, r);
+  if (t > 0.0) {
+    vec3 N = unit_vector(r.at(t) - vec3(0, 0, -1));
+    return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1);
   }
+
   vec3 unit_direction = unit_vector(r.direction());
   double a = 0.5 * (unit_direction.y() + 1.0);
   return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
